@@ -1,13 +1,43 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import { ArrowRight, Check, ChevronDown, Download, Menu, QrCode, X } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Download, Maximize2, Menu, QrCode, X } from "lucide-react";
 import QRCode from "qrcode";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 const eventDetails = { date: "Saturday, 19 December 2026", time: "Doors 2:00 PM · Buffet 3:00 PM", place: "1 High Point, New John Street, Bradford BD1 2BA", price: "£30" };
 const paymentLink = "https://monzo.me/joenkemakosi?h=5WqWwn&account_type=personal";
+const feastPreviews = [
+  {
+    id: "01",
+    src: "/assets/menu/02-food-reference.webp",
+    title: "Assorted meats",
+    alt: "Grilled assorted meats with onions and spice",
+    caption: "Charred assorted beef cuts finished with sliced red onions and warm suya spice.",
+  },
+  {
+    id: "02",
+    src: "/assets/menu/03-food-reference.webp",
+    title: "Croaker fish",
+    alt: "Grilled croaker fish with plantain",
+    caption: "Whole grilled croaker glazed in rich pepper sauce with sweet fried plantain.",
+  },
+  {
+    id: "03",
+    src: "/assets/menu/04-food-reference.webp",
+    title: "Rice & sauce",
+    alt: "White rice with vegetable sauce and chicken",
+    caption: "Fluffy white rice paired with slow-simmered tomato pepper sauce and spiced chicken.",
+  },
+  {
+    id: "04",
+    src: "/assets/menu/05-food-reference.webp",
+    title: "Fried rice",
+    alt: "Fried rice with grilled chicken",
+    caption: "Seasoned Nigerian fried rice served with smoky grilled chicken and fresh slaw.",
+  },
+] as const;
 const TICKET_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function generateLocalTicketId() {
   const year = new Date().getFullYear();
@@ -53,8 +83,21 @@ export default function Home() {
   const [reserveOpen, setReserveOpen] = useState(false);
   const [reserveError, setReserveError] = useState("");
   const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const ticket = guestPass?.ticket ?? null;
+  const activePreview = previewIndex !== null ? feastPreviews[previewIndex] : null;
   const chosenPackage = { name: "The Complete Nigerian Buffet Pass", price: "£30" };
+
+  useEffect(() => {
+    if (previewIndex === null) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPreviewIndex(null);
+      else if (event.key === "ArrowRight") setPreviewIndex(idx => (idx === null ? 0 : (idx + 1) % feastPreviews.length));
+      else if (event.key === "ArrowLeft") setPreviewIndex(idx => (idx === null ? 0 : (idx - 1 + feastPreviews.length) % feastPreviews.length));
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [previewIndex]);
 
   useEffect(() => {
     if (!ticket) { setQrCodeUrl(""); return; }
@@ -186,14 +229,28 @@ export default function Home() {
 
       <section className="feast-index" aria-label="A taste of the Nigerian buffet">
         <div className="feast-index-heading">
-          <span>02 / A taste of the table</span>
-          <p>Real plates. Big flavour.<br />A little preview of what’s coming.</p>
+          <div>
+            <span>02 / A taste of the table</span>
+            <h3>Real plates. <em>Big flavour.</em></h3>
+          </div>
+          <p>The dishes pictured below are a preview of what’s coming to the buffet. Tap any plate to inspect it up close.</p>
         </div>
         <div className="feast-photo-rail">
-          <figure><img src="/assets/menu/02-food-reference.webp" alt="Grilled assorted meats with onions and spice" /><figcaption><strong>01</strong> Assorted meats</figcaption></figure>
-          <figure><img src="/assets/menu/03-food-reference.webp" alt="Grilled croaker fish with plantain" /><figcaption><strong>02</strong> Croaker fish</figcaption></figure>
-          <figure><img src="/assets/menu/04-food-reference.webp" alt="White rice with vegetable sauce and chicken" /><figcaption><strong>03</strong> Rice & sauce</figcaption></figure>
-          <figure><img src="/assets/menu/05-food-reference.webp" alt="Fried rice with grilled chicken" /><figcaption><strong>04</strong> Fried rice</figcaption></figure>
+          {feastPreviews.map((item, index) => (
+            <button
+              key={item.id}
+              type="button"
+              className="feast-photo-card"
+              onClick={() => setPreviewIndex(index)}
+              aria-label={`Preview ${item.title}`}
+            >
+              <figure>
+                <img src={item.src} alt={item.alt} />
+                <span className="feast-photo-expand" aria-hidden="true"><Maximize2 size={13} /></span>
+                <figcaption><strong>{item.id}</strong> {item.title}</figcaption>
+              </figure>
+            </button>
+          ))}
         </div>
       </section>
 
@@ -323,5 +380,55 @@ export default function Home() {
 
     <footer className="reference-footer"><a className="reference-brand" href="#top"><img className="reference-logo" src="/assets/afro-kravings-logo-trimmed.png" alt="Afro Kravings" /></a><p>Come hungry. Leave glowing.</p><div><a href="#details">Guest information <ArrowRight size={14} /></a></div></footer>
     {reserveOpen ? <div className="modal-backdrop" role="presentation" onClick={() => setReserveOpen(false)}><div className="reserve-modal reference-modal" role="dialog" aria-modal="true" aria-labelledby="reserve-title" onClick={event => event.stopPropagation()}><button className="modal-close" onClick={() => setReserveOpen(false)} aria-label="Close"><X size={18} /></button><span className="reference-kicker dark-kicker">One equal pass</span><h2 id="reserve-title">Claim your<br /><em>place.</em></h2><p>Enter your details and we’ll create your digital QR entry pass immediately.</p><div className="modal-summary"><span><small>Pass</small>The Complete Buffet Pass</span><span><small>Total</small>£30 / guest</span></div><div className="guest-fields"><label>Your name<Input value={guestName} onChange={event => setGuestName(event.target.value)} placeholder="e.g. Samuel Adeyemi" /></label><label>Your email<Input type="email" value={guestEmail} onChange={event => setGuestEmail(event.target.value)} placeholder="e.g. samuel@example.com" /></label></div><p className="modal-note">No-kids-allowed buffet — parents and adults are welcome to come have fun, so please keep kids at home or with guardians. Your £30 pass covers the full Nigerian buffet and your QR entry pass.</p>{reserveError ? <p className="modal-error">{reserveError}</p> : null}<Button className="form-submit" onClick={handleReserve} disabled={reserveMutation.isPending}>{reserveMutation.isPending ? "Creating your pass…" : "Create my QR pass"} <ArrowRight size={17} /></Button></div></div> : null}
+    {activePreview && previewIndex !== null ? (
+      <div className="modal-backdrop feast-lightbox-backdrop" role="presentation" onClick={() => setPreviewIndex(null)}>
+        <div className="feast-lightbox" role="dialog" aria-modal="true" aria-labelledby="feast-preview-title" onClick={event => event.stopPropagation()}>
+          <div className="feast-lightbox-bar">
+            <span className="feast-lightbox-index">PLATE {activePreview.id} / 0{feastPreviews.length}</span>
+            <button type="button" className="feast-lightbox-close" onClick={() => setPreviewIndex(null)} aria-label="Close preview">
+              <X size={18} />
+            </button>
+          </div>
+          <div className="feast-lightbox-stage">
+            <button
+              type="button"
+              className="feast-lightbox-nav prev"
+              onClick={() => setPreviewIndex((previewIndex - 1 + feastPreviews.length) % feastPreviews.length)}
+              aria-label="Previous dish"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <img src={activePreview.src} alt={activePreview.alt} />
+            <button
+              type="button"
+              className="feast-lightbox-nav next"
+              onClick={() => setPreviewIndex((previewIndex + 1) % feastPreviews.length)}
+              aria-label="Next dish"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+          <div className="feast-lightbox-meta">
+            <div>
+              <h3 id="feast-preview-title">{activePreview.title}</h3>
+              <p>{activePreview.caption}</p>
+            </div>
+            <div className="feast-lightbox-thumbs" aria-label="Choose dish preview">
+              {feastPreviews.map((item, idx) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={idx === previewIndex ? "is-active" : ""}
+                  onClick={() => setPreviewIndex(idx)}
+                  aria-label={`View ${item.title}`}
+                >
+                  {item.id}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : null}
   </div>;
 }

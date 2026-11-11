@@ -689,21 +689,22 @@ body { background:#f3eadb; }
 
 /* Feast preview section */
 .reference-site .feast-index {
-  padding: 34px 6vw 42px;
+  padding: 46px 6vw 52px;
   background: #241014;
   color: #fff8ef;
 }
 
 .reference-site .feast-index-heading {
   max-width: 1140px;
-  margin: 0 auto 22px;
+  margin: 0 auto 28px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
+  gap: 28px;
 }
 
 .reference-site .feast-index-heading span {
+  display: block;
   color: #efbe84;
   font-family: var(--font-body);
   font-size: 12px;
@@ -712,7 +713,24 @@ body { background:#f3eadb; }
   text-transform: uppercase;
 }
 
+.reference-site .feast-index-heading h3 {
+  margin: 8px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: #fff8ef;
+}
+
+.reference-site .feast-index-heading h3 em {
+  color: #efbe84;
+  font-style: italic;
+  font-weight: 600;
+}
+
 .reference-site .feast-index-heading p {
+  max-width: 400px;
   margin: 0;
   color: #d8baa8;
   font-family: var(--font-body);
@@ -726,33 +744,46 @@ body { background:#f3eadb; }
   max-width: 1140px;
   margin: auto;
   display: grid;
-  grid-template-columns: 1.35fr 1fr 1fr 1.15fr;
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.reference-site .feast-photo-card {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.reference-site .feast-photo-card:focus-visible {
+  outline: 2px solid #efbe84;
+  outline-offset: 3px;
 }
 
 .reference-site .feast-photo-rail figure {
   margin: 0;
   min-width: 0;
   position: relative;
-  aspect-ratio: 1.18;
+  aspect-ratio: 1.05;
   overflow: hidden;
   background: #35151a;
-  border: 1px solid rgba(239, 190, 132, 0.2);
+  border: 1px solid rgba(239, 190, 132, 0.24);
+  transition: border-color 0.25s ease, transform 0.25s ease;
 }
 
-.reference-site .feast-photo-rail figure:nth-child(2) {
-  transform: translateY(8px);
-}
-
-.reference-site .feast-photo-rail figure:nth-child(4) {
-  transform: translateY(-6px);
+.reference-site .feast-photo-card:hover figure {
+  border-color: #efbe84;
+  transform: translateY(-3px);
 }
 
 .reference-site .feast-photo-rail figure::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 45%, rgba(36, 16, 20, 0.85));
+  background: linear-gradient(180deg, rgba(36, 16, 20, 0.12) 0%, transparent 38%, rgba(36, 16, 20, 0.88) 100%);
   pointer-events: none;
 }
 
@@ -760,11 +791,33 @@ body { background:#f3eadb; }
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
   transition: transform 0.35s ease;
 }
 
-.reference-site .feast-photo-rail figure:hover img {
+.reference-site .feast-photo-card:hover img {
   transform: scale(1.05);
+}
+
+.reference-site .feast-photo-expand {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: rgba(36, 16, 20, 0.74);
+  border: 1px solid rgba(239, 190, 132, 0.45);
+  color: #efbe84;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.reference-site .feast-photo-card:hover .feast-photo-expand {
+  background: #efbe84;
+  border-color: #efbe84;
+  color: #241014;
 }
 
 .reference-site .feast-photo-rail figcaption {
@@ -775,9 +828,9 @@ body { background:#f3eadb; }
   bottom: 12px;
   color: #fff8ef;
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
 }
 
 .reference-site .feast-photo-rail figcaption strong {
@@ -785,6 +838,192 @@ body { background:#f3eadb; }
   color: #efbe84;
   font-family: var(--font-mono);
   font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .reference-site .feast-index-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .reference-site .feast-index-heading p {
+    text-align: left;
+    max-width: 520px;
+  }
+  .reference-site .feast-photo-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 540px) {
+  .reference-site .feast-index {
+    padding: 36px 24px 42px;
+  }
+  .reference-site .feast-photo-rail {
+    gap: 10px;
+  }
+}
+
+/* Sleek dish preview lightbox */
+.reference-site .feast-lightbox-backdrop {
+  z-index: 40;
+  background: rgba(20, 8, 11, 0.84);
+  backdrop-filter: blur(8px);
+}
+
+.reference-site .feast-lightbox {
+  width: min(92vw, 760px);
+  background: #241014;
+  border: 1.5px solid rgba(239, 190, 132, 0.45);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+  color: #fff8ef;
+  overflow: hidden;
+}
+
+.reference-site .feast-lightbox-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  border-bottom: 1px solid rgba(239, 190, 132, 0.2);
+}
+
+.reference-site .feast-lightbox-index {
+  color: #efbe84;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.reference-site .feast-lightbox-close {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(239, 190, 132, 0.3);
+  background: transparent;
+  color: #fff8ef;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.reference-site .feast-lightbox-close:hover {
+  background: #efbe84;
+  color: #241014;
+}
+
+.reference-site .feast-lightbox-stage {
+  position: relative;
+  background: #14070a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 56px;
+}
+
+.reference-site .feast-lightbox-stage img {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+}
+
+.reference-site .feast-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  background: rgba(36, 16, 20, 0.85);
+  border: 1px solid rgba(239, 190, 132, 0.45);
+  color: #efbe84;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.reference-site .feast-lightbox-nav:hover {
+  background: #efbe84;
+  color: #241014;
+}
+
+.reference-site .feast-lightbox-nav.prev {
+  left: 12px;
+}
+
+.reference-site .feast-lightbox-nav.next {
+  right: 12px;
+}
+
+.reference-site .feast-lightbox-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  border-top: 1px solid rgba(239, 190, 132, 0.2);
+}
+
+.reference-site .feast-lightbox-meta h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff8ef;
+}
+
+.reference-site .feast-lightbox-meta p {
+  margin: 4px 0 0;
+  color: #d8baa8;
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.reference-site .feast-lightbox-thumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.reference-site .feast-lightbox-thumbs button {
+  padding: 6px 10px;
+  border: 1px solid rgba(239, 190, 132, 0.3);
+  background: transparent;
+  color: #d8baa8;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.reference-site .feast-lightbox-thumbs button.is-active,
+.reference-site .feast-lightbox-thumbs button:hover {
+  border-color: #efbe84;
+  background: #efbe84;
+  color: #241014;
+}
+
+@media (max-width: 640px) {
+  .reference-site .feast-lightbox-stage {
+    padding: 14px 44px;
+  }
+  .reference-site .feast-lightbox-nav {
+    width: 32px;
+    height: 32px;
+  }
+  .reference-site .feast-lightbox-nav.prev {
+    left: 8px;
+  }
+  .reference-site .feast-lightbox-nav.next {
+    right: 8px;
+  }
+  .reference-site .feast-lightbox-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* Reference steps */
