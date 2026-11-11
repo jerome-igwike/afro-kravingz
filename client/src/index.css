@@ -504,43 +504,50 @@ body { background:#f3eadb; }
 .reference-site .studio-opening-copy h1 em {
   color: var(--tomato);
   font-style: italic;
-  font-weight: 400;
+  font-weight: 600;
+}
+
+.reference-site .studio-opening-copy h1 em .hero-joe {
+  font-style: normal;
+  font-weight: 700;
 }
 
 .reference-site .event-date-lockup {
   width: max-content;
+  max-width: 100%;
   margin: 22px 0 20px;
-  padding: 14px 20px 13px;
-  border: 1px solid rgba(36, 16, 20, 0.35);
-  background: #dfc6a7;
-  color: var(--ink);
+  padding: 16px 24px 15px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: #fffaf3;
   display: grid;
   gap: 4px;
-  box-shadow: 4px 4px 0 rgba(36, 16, 20, 0.08);
+  box-shadow: 6px 6px 0 var(--tomato);
 }
 
 .reference-site .event-date-lockup span {
-  color: var(--tomato);
+  color: #efbe84;
   font-family: var(--font-body);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
 }
 
 .reference-site .event-date-lockup strong {
+  color: #fffaf3;
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: clamp(23px, 2.5vw, 28px);
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.01em;
 }
 
 .reference-site .event-date-lockup small {
-  color: #5c3b31;
+  color: #e6d1ba;
   font-family: var(--font-body);
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 .reference-site .studio-opening-copy p {
