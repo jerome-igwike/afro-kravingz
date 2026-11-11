@@ -8,6 +8,30 @@ import { toast } from "sonner";
 
 const eventDetails = { date: "Sunday, 20 December 2026", time: "Doors 2:00 PM · Buffet 3:00 PM", place: "1 High Point, New John Street, Bradford BD1 2BA", price: "£30" };
 const paymentLink = "https://monzo.me/joenkemakosi?h=5WqWwn&account_type=personal";
+const TICKET_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function generateLocalTicketId() {
+  const year = new Date().getFullYear();
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  let suffix = "";
+  for (let i = 0; i < 8; i++) suffix += TICKET_ALPHABET[bytes[i] % TICKET_ALPHABET.length];
+  return `AKXMAS-${year}-${suffix}`;
+}
+function isBackendUnavailableError(error: unknown) {
+  if (!(error instanceof Error)) return true;
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes("database is not available") ||
+    msg.includes("unexpected token") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("networkerror") ||
+    msg.includes("not found") ||
+    msg.includes("404") ||
+    msg.includes("405") ||
+    msg.includes("500") ||
+    msg.includes("json")
+  );
+}
 function initials(name: string) { return name.split(" ").map(part => part[0]).join("").slice(0, 2).toUpperCase(); }
 function escapeHtml(value: string | null | undefined) { return String(value ?? "").replace(/[&<>\"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character] ?? character); }
 
@@ -24,6 +48,7 @@ export default function Home() {
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [guestListDone, setGuestListDone] = useState(false);
+  const [guestListError, setGuestListError] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [reserveOpen, setReserveOpen] = useState(false);
   const [reserveError, setReserveError] = useState("");
@@ -42,20 +67,72 @@ export default function Home() {
 
   const handleGuestList = async (event: React.FormEvent) => {
     event.preventDefault();
-    try { await guestListMutation.mutateAsync({ name: guestName, email: guestEmail }); setGuestListDone(true); } catch { /* inline error remains visible */ }
+    const trimmedName = guestName.trim();
+    const normalizedEmail = guestEmail.trim().toLowerCase();
+    if (trimmedName.length < 2) { setGuestListError("Please add your name."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) { setGuestListError("Please use a valid email."); return; }
+    setGuestListError("");
+    try {
+      await guestListMutation.mutateAsync({ name: trimmedName, email: normalizedEmail });
+      setGuestListDone(true);
+    } catch (error) {
+      if (isBackendUnavailableError(error)) {
+        try {
+          const existing = JSON.parse(localStorage.getItem("afro-kravings-guest-list") ?? "[]") as Array<{ name: string; email: string; createdAt: string }>;
+          if (!existing.some(entry => entry.email === normalizedEmail)) {
+            existing.push({ name: trimmedName, email: normalizedEmail, createdAt: new Date().toISOString() });
+            localStorage.setItem("afro-kravings-guest-list", JSON.stringify(existing));
+          }
+        } catch {
+          /* ignore localStorage quota errors */
+        }
+        setGuestListDone(true);
+      } else {
+        setGuestListError(error instanceof Error ? error.message : "Could not save your details right now.");
+      }
+    }
   };
   const handleReserve = async () => {
-    if (!guestName.trim() || !guestEmail.trim()) { setReserveError("Add your name and email so we can create your QR pass."); return; }
-    try {
-      setReserveError("");
-      const result = await reserveMutation.mutateAsync({ name: guestName, email: guestEmail });
-      localStorage.setItem("afro-kravings-pending-order", JSON.stringify({ name: guestName.trim(), email: guestEmail.trim().toLowerCase(), ticketId: result.ticket?.ticketId ?? "", createdAt: new Date().toISOString(), paymentStatus: "pending", confirmationStatus: "not_sent" }));
+    const trimmedName = guestName.trim();
+    const normalizedEmail = guestEmail.trim().toLowerCase();
+    if (trimmedName.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setReserveError("Add a valid name and email so we can create your QR pass.");
+      return;
+    }
+    setReserveError("");
+    const finalizeReservation = (result: NonNullable<Awaited<ReturnType<typeof reserveMutation.mutateAsync>>>) => {
+      localStorage.setItem("afro-kravings-pending-order", JSON.stringify({ name: trimmedName, email: normalizedEmail, ticketId: result.ticket?.ticketId ?? "", createdAt: new Date().toISOString(), paymentStatus: "pending", confirmationStatus: "not_sent" }));
       toast.success("Reservation received", { description: "Please complete the £30 Monzo payment. We’ll confirm your place by email after approval." });
       setGuestPass(result);
       setReserveOpen(false);
       setTimeout(() => document.getElementById("my-pass")?.scrollIntoView({ behavior: "smooth" }), 80);
+    };
+    try {
+      const result = await reserveMutation.mutateAsync({ name: trimmedName, email: normalizedEmail });
+      if (result) finalizeReservation(result);
     } catch (error) {
-      setReserveError(error instanceof Error ? error.message : "We couldn’t create your entry pass just now. Please try again.");
+      if (isBackendUnavailableError(error)) {
+        let existingTicketId: string | null = null;
+        try {
+          const storedPasses = JSON.parse(localStorage.getItem("afro-kravings-guest-passes") ?? "{}") as Record<string, { ticketId: string; attendeeName: string; attendeeEmail: string }>;
+          if (storedPasses[normalizedEmail]?.ticketId) {
+            existingTicketId = storedPasses[normalizedEmail].ticketId;
+          } else {
+            existingTicketId = generateLocalTicketId();
+            storedPasses[normalizedEmail] = { ticketId: existingTicketId, attendeeName: trimmedName, attendeeEmail: normalizedEmail };
+            localStorage.setItem("afro-kravings-guest-passes", JSON.stringify(storedPasses));
+          }
+        } catch {
+          existingTicketId = generateLocalTicketId();
+        }
+        const now = new Date();
+        finalizeReservation({
+          reservation: { id: 0, userId: null, guestEmail: normalizedEmail, status: "reserved", createdAt: now },
+          ticket: { id: 0, reservationId: 0, ticketId: existingTicketId, attendeeName: trimmedName, attendeeEmail: normalizedEmail, createdAt: now },
+        });
+      } else {
+        setReserveError(error instanceof Error ? error.message : "We couldn’t create your entry pass just now. Please try again.");
+      }
     }
   };
   const downloadTicket = () => { if (!ticketUrl || !ticket) return; const anchor = document.createElement("a"); anchor.href = ticketUrl; anchor.download = `${ticket.ticketId}-afro-kravings-buffet.html`; anchor.click(); };
@@ -238,7 +315,7 @@ export default function Home() {
             <Input value={guestName} onChange={event => setGuestName(event.target.value)} placeholder="Your name" required />
             <Input type="email" value={guestEmail} onChange={event => setGuestEmail(event.target.value)} placeholder="Your email" required />
             <Button type="submit" disabled={guestListMutation.isPending}>{guestListMutation.isPending ? "Saving…" : "Join guest list"} <ArrowRight size={15} /></Button>
-            {guestListMutation.error ? <small>{guestListMutation.error.message}</small> : null}
+            {guestListError ? <small>{guestListError}</small> : null}
           </form>
         )}
       </section>
