@@ -1807,12 +1807,137 @@ body { background:#f3eadb; }
 @media (max-width:600px) { .reference-site .reference-hero { min-height:650px; }.reference-site .reference-hero-copy { padding:90px 24px 70px; }.reference-site .reference-hero h1 { font-size:58px; }.reference-site .reference-steps > div { min-height:78px; }.reference-site .package-image { height:180px; }.reference-site .order-section { padding-top:90px; }.reference-site .order-section::before { left:24px; }.reference-site .order-panel { transform:none; }.reference-site .reference-section-heading h2,.reference-site .guest-list-section h2,.reference-site .pass-heading h2 { font-size:58px; } }
 
 .reference-logo { display:block; width:132px; height:44px; object-fit:contain; object-position:left center; }
-.reference-site .reference-brand { width:145px; }
+.reference-site .reference-brand { width:145px; flex-shrink:0; }
 .reference-site .reference-brand strong { color:inherit; }
 .reference-site .order-option-copy strong { font-size:16px; }
 .reference-site .order-summary { align-items:flex-end; }
 .reference-site .order-summary span:first-child { max-width:280px; }
-@media (max-width:600px) { .reference-logo { width:118px; height:38px; }.reference-site .reference-brand { width:125px; } }
+
+@media (max-width: 960px) {
+  .reference-site .reference-header {
+    min-height: 68px;
+    padding: 0 20px;
+    gap: 12px;
+    justify-content: space-between;
+  }
+  .reference-site .nav-context {
+    display: none;
+  }
+  .reference-site .reference-brand,
+  .reference-logo {
+    width: 118px;
+    height: 38px;
+  }
+  .reference-site .reference-actions {
+    margin-left: auto;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .reference-site .reference-login {
+    padding: 8px 14px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .reference-site .reference-menu {
+    display: inline-grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid rgba(239, 190, 132, 0.45);
+    border-radius: 999px;
+    background: rgba(255, 250, 243, 0.04);
+    color: #efbe84;
+    flex-shrink: 0;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .reference-site .reference-menu:hover {
+    background: #efbe84;
+    color: var(--ink);
+  }
+  .reference-site .reference-nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding: 8px 20px 18px;
+    background: var(--ink);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    border-top: 1px solid rgba(239, 190, 132, 0.2);
+    border-bottom: 1.5px solid #efbe84;
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.4);
+    z-index: 30;
+  }
+  .reference-site .reference-nav.is-open {
+    display: flex;
+  }
+  .reference-site .reference-nav a {
+    width: 100%;
+    padding: 14px 4px;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(244, 234, 220, 0.1);
+  }
+  .reference-site .reference-nav a:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .reference-site .facts-section {
+    padding: 58px 20px 64px;
+  }
+  .reference-site .facts-heading {
+    margin-bottom: 28px;
+    align-items: flex-end;
+    gap: 14px;
+  }
+  .reference-site .festive-bauble-img {
+    width: 52px;
+  }
+  .reference-site .facts-grid {
+    gap: 10px;
+  }
+  .reference-site .facts-grid div {
+    display: grid;
+    grid-template-columns: 98px 1fr;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+  }
+  .reference-site .facts-grid div strong {
+    font-size: 20px;
+    white-space: nowrap;
+  }
+  .reference-site .facts-grid div span {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 400px) {
+  .reference-site .reference-header {
+    padding: 0 16px;
+    gap: 8px;
+  }
+  .reference-site .reference-brand,
+  .reference-logo {
+    width: 104px;
+    height: 34px;
+  }
+  .reference-site .reference-login {
+    padding: 7px 11px;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+  .reference-site .reference-menu {
+    width: 34px;
+    height: 34px;
+  }
+}
 
 .admin-gate,.admin-shell { min-height:100vh; background:#f4eadc; color:#241014; font-family:var(--font-body); }
 .admin-gate { display:grid; place-items:center; padding:24px; }

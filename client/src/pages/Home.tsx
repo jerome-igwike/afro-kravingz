@@ -6,7 +6,7 @@ import QRCode from "qrcode";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-const eventDetails = { date: "Saturday, 19 December 2026", time: "Doors 2:00 PM · Buffet 3:00 PM", place: "1 High Point, New John Street, Bradford BD1 2BA", price: "£30" };
+const eventDetails = { date: "Saturday, 19 December 2026", time: "Doors 2:00 PM · Buffet 3:00 PM", place: "1 High Point, New John Street, Bradford BD1 2BA", price: "€25" };
 const paymentLink = "https://monzo.me/joenkemakosi?h=5WqWwn&account_type=personal";
 const feastPreviews = [
   {
@@ -86,7 +86,7 @@ export default function Home() {
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const ticket = guestPass?.ticket ?? null;
   const activePreview = previewIndex !== null ? feastPreviews[previewIndex] : null;
-  const chosenPackage = { name: "The Complete Nigerian Buffet Pass", price: "£30" };
+  const chosenPackage = { name: "The Complete Nigerian Buffet Pass", price: "€25" };
 
   useEffect(() => {
     if (previewIndex === null) return;
@@ -145,7 +145,7 @@ export default function Home() {
     setReserveError("");
     const finalizeReservation = (result: NonNullable<Awaited<ReturnType<typeof reserveMutation.mutateAsync>>>) => {
       localStorage.setItem("afro-kravings-pending-order", JSON.stringify({ name: trimmedName, email: normalizedEmail, ticketId: result.ticket?.ticketId ?? "", createdAt: new Date().toISOString(), paymentStatus: "pending", confirmationStatus: "not_sent" }));
-      toast.success("Reservation received", { description: "Please complete the £30 Monzo payment. We’ll confirm your place by email after approval." });
+      toast.success("Reservation received", { description: "Please complete the €25 Monzo payment. We’ll confirm your place by email after approval." });
       setGuestPass(result);
       setReserveOpen(false);
       setTimeout(() => document.getElementById("my-pass")?.scrollIntoView({ behavior: "smooth" }), 80);
@@ -182,13 +182,13 @@ export default function Home() {
   const downloadQrImage = () => { if (!qrCodeUrl || !ticket) return; const anchor = document.createElement("a"); anchor.href = qrCodeUrl; anchor.download = `${ticket.ticketId}-entry-qr.png`; anchor.click(); };
 
   return <div className="site-shell reference-site">
-    <header className="reference-header"><a className="reference-brand" href="#top"><img className="reference-logo" src="/assets/afro-kravings-logo-trimmed.png" alt="Afro Kravings" /></a><span className="nav-context">JINGLE BELLS WITH JOE<br /><strong>19 DEC · BRADFORD</strong></span><nav className={mobileOpen ? "reference-nav is-open" : "reference-nav"}><a href="#packages"><span>01</span> The menu</a><a href="#how-it-works"><span>02</span> The day</a><a href="#order"><span>03</span> The pass</a><a href="#details"><span>04</span> Find us</a></nav><div className="reference-actions"><a className="reference-login" href="#order">£30 / Take a seat</a><button className="mobile-menu reference-menu" onClick={() => setMobileOpen(open => !open)} aria-label="Toggle navigation">{mobileOpen ? <X size={20} /> : <Menu size={20} />}</button></div></header>
+    <header className="reference-header"><a className="reference-brand" href="#top"><img className="reference-logo" src="/assets/afro-kravings-logo-trimmed.png" alt="Afro Kravings" /></a><span className="nav-context">JINGLE BELLS WITH JOE<br /><strong>19 DEC · BRADFORD</strong></span><nav className={mobileOpen ? "reference-nav is-open" : "reference-nav"}><a href="#packages" onClick={() => setMobileOpen(false)}><span>01</span> The menu</a><a href="#how-it-works" onClick={() => setMobileOpen(false)}><span>02</span> The day</a><a href="#order" onClick={() => setMobileOpen(false)}><span>03</span> The pass</a><a href="#details" onClick={() => setMobileOpen(false)}><span>04</span> Find us</a></nav><div className="reference-actions"><a className="reference-login" href="#order">€25 / Take a seat</a><button className="mobile-menu reference-menu" onClick={() => setMobileOpen(open => !open)} aria-label="Toggle navigation" aria-expanded={mobileOpen}>{mobileOpen ? <X size={18} /> : <Menu size={18} />}</button></div></header>
     <main id="top">
       <section className="studio-opening" aria-label="Afro Kravings Jingle Bells with Joe Nigerian Buffet">
         <div className="opening-topline">
           <span>THE AFRO KRAVINGZ / AK-026</span>
           <span className="topline-center"><img src="/assets/holiday/holly-pine-bow.png" alt="Christmas Holly" className="topline-holly" /> JINGLE BELLS WITH JOE</span>
-          <span>ONE EQUAL PASS · £30</span>
+          <span>ONE EQUAL PASS · €25</span>
         </div>
         <div className="studio-opening-grid">
           <div className="studio-opening-copy">
@@ -210,7 +210,7 @@ export default function Home() {
           </div>
           <div className="pass-marker">
             <span className="pass-marker-label">ENTRY / 01</span>
-            <div className="pass-marker-price">£30</div>
+            <div className="pass-marker-price">€25</div>
             <strong>ONE-TIME<br />BUFFET PASS</strong>
             <div className="pass-marker-rule" />
             <span>RICE · SOUPS<br />& MORE</span>
@@ -255,7 +255,7 @@ export default function Home() {
       </section>
 
       <section className="reference-steps" id="how-it-works">
-        <div><span className="step-icon">♜</span><span><strong>Claim One Equal Pass</strong><small>£30 per guest. One generous Nigerian buffet experience.</small></span></div>
+        <div><span className="step-icon">♜</span><span><strong>Claim One Equal Pass</strong><small>€25 per guest. One generous Nigerian buffet experience.</small></span></div>
         <div><span className="step-icon">▤</span><span><strong>Come To The Table</strong><small>Rice dishes, traditional soups, proteins and more.</small></span></div>
         <div><span className="step-icon">▣</span><span><strong>Get Your QR Pass</strong><small>Show your digital entry pass at 1 High Point, Bradford.</small></span></div>
       </section>
@@ -269,7 +269,7 @@ export default function Home() {
           <div className="festive-cloche-wrap">
             <img src="/assets/holiday/golden-cloche.png" alt="Grand Nigerian Feast Cloche" className="festive-cloche-img" />
           </div>
-          <p>Everything listed is included in your £30 buffet pass. From fragrant rice dishes to deep, comforting soups and classic Nigerian favourites.</p>
+          <p>Everything listed is included in your €25 buffet pass. From fragrant rice dishes to deep, comforting soups and classic Nigerian favourites.</p>
         </div>
         <div className="buffet-list">
           <article><span>RICE</span><div><h3>Nigerian Jollof Rice</h3><p>Rich, smoky and warmly spiced.</p></div><b>RICE DISHES</b></article>
@@ -280,7 +280,7 @@ export default function Home() {
           <article><span>SOUP</span><div><h3>Fisherman Okro Soup</h3><p>Served with pounded yam or semovita.</p></div><b>SEAFOOD SPECIAL</b></article>
           <article><span>SOUP</span><div><h3>Nsala Soup</h3><p>Served with pounded yam or semovita.</p></div><b>TRADITIONAL SOUP</b></article>
           <article><span>MORE</span><div><h3>Abacha · Nkwobi</h3><p>Beloved Nigerian favourites, ready for the table.</p></div><b>CLASSICS</b></article>
-          <article><span>MORE</span><div><h3>Proteins</h3><p>Chicken, croaker fish and assorted meats.</p></div><b>FROM THE KITCHEN</b></article>
+          <article><span>MORE</span><div><h3>Proteins</h3><p>Chicken, turkey, croaker fish and assorted meats.</p></div><b>FROM THE KITCHEN</b></article>
           <article><span>MORE</span><div><h3>Moi-Moi</h3><p>Soft and savoury.</p></div><b>FAVOURITE</b></article>
         </div>
       </section>
@@ -302,27 +302,27 @@ export default function Home() {
             </div>
           </div>
           <div className="order-panel">
-            <div className="order-panel-heading"><span>One equal buffet pass</span><span>£30 per guest</span></div>
+            <div className="order-panel-heading"><span>One equal buffet pass</span><span>€25 per guest</span></div>
             <div className="order-options">
               <div className="pass-option">
                 <span className="pass-option-number">AK / 01</span>
                 <span className="order-option-copy"><strong>The Complete Nigerian Buffet Pass</strong><small>Rice, soups, proteins & Nigerian favourites</small></span>
-                <b>£30</b>
+                <b>€25</b>
               </div>
             </div>
             <div className="order-summary">
               <span><small>One equal pass includes</small><strong>Full Nigerian buffet + live music</strong></span>
-              <span><small>Total</small><strong>£30 / guest</strong></span>
+              <span><small>Total</small><strong>€25 / guest</strong></span>
             </div>
-            <button className="reference-primary order-button" onClick={() => { setReserveError(""); setReserveOpen(true); }} disabled={reserveMutation.isPending}>{reserveMutation.isPending ? "Creating your pass…" : "Reserve my £30 pass"} <ArrowRight size={15} /></button>
+            <button className="reference-primary order-button" onClick={() => { setReserveError(""); setReserveOpen(true); }} disabled={reserveMutation.isPending}>{reserveMutation.isPending ? "Creating your pass…" : "Reserve my €25 pass"} <ArrowRight size={15} /></button>
             <div className="payment-card">
               <div>
                 <span className="payment-kicker">STEP 02 / PAY AFTER RESERVING</span>
-                <h3>Send £30 via Monzo</h3>
+                <h3>Send €25 via Monzo</h3>
                 <p>Use the link or scan the QR. Put your name in the payment note so we can match it to your reservation.</p>
                 <a href={paymentLink} target="_blank" rel="noreferrer">Open Monzo payment link <ArrowRight size={14} /></a>
               </div>
-              <img src="/assets/payment/monzo-qr.jpg" alt="Scan to pay £30 via Monzo to joenkemakosi" />
+              <img src="/assets/payment/monzo-qr.jpg" alt="Scan to pay €25 via Monzo to joenkemakosi" />
             </div>
             <small className="order-note">No-kids-allowed buffet: parents and adults are warmly invited to come have fun, with kids kept at home or with guardians. Your place is confirmed after payment verification.</small>
           </div>
@@ -332,7 +332,7 @@ export default function Home() {
       <section className="facts-section" id="details">
         <div className="facts-heading">
           <div className="facts-heading-left">
-            <span className="reference-kicker dark-kicker">What your £30 includes</span>
+            <span className="reference-kicker dark-kicker">What your €25 includes</span>
             <h2>One table.<br /><em>Everyone equal.</em></h2>
           </div>
           <div className="festive-bauble-wrap">
@@ -340,12 +340,12 @@ export default function Home() {
           </div>
         </div>
         <div className="facts-grid">
-          <div><strong>RICE</strong><span>rice dishes, soups<br />and Nigerian favourites</span></div>
-          <div><strong>02:00</strong><span>doors open with<br />spiced Zobo mocktail</span></div>
-          <div><strong>LIVE</strong><span>Highlife, carols<br />and acoustic music</span></div>
-          <div><strong>SOUP</strong><span>served with pounded yam<br />or semovita</span></div>
-          <div><strong>NO KIDS</strong><span>adults &amp; parents welcome —<br />keep kids at home or with guardians</span></div>
-          <div><strong>BD1</strong><span>1 High Point, New<br />John Street, Bradford</span></div>
+          <div><strong>RICE</strong><span>Rice dishes, proteins and Nigerian favourites</span></div>
+          <div><strong>SOUP</strong><span>Served with pounded yam or semovita</span></div>
+          <div><strong>02:00</strong><span>Doors open with spiced Zobo mocktail</span></div>
+          <div><strong>LIVE</strong><span>Highlife, carols and acoustic music</span></div>
+          <div><strong>NO KIDS</strong><span>Adults &amp; parents welcome — keep kids at home or with guardians</span></div>
+          <div><strong>BD1</strong><span>1 High Point, New John Street, Bradford</span></div>
         </div>
       </section>
 
@@ -379,7 +379,7 @@ export default function Home() {
     </main>
 
     <footer className="reference-footer"><a className="reference-brand" href="#top"><img className="reference-logo" src="/assets/afro-kravings-logo-trimmed.png" alt="Afro Kravings" /></a><p>Come hungry. Leave glowing.</p><div><a href="#details">Guest information <ArrowRight size={14} /></a></div></footer>
-    {reserveOpen ? <div className="modal-backdrop" role="presentation" onClick={() => setReserveOpen(false)}><div className="reserve-modal reference-modal" role="dialog" aria-modal="true" aria-labelledby="reserve-title" onClick={event => event.stopPropagation()}><button className="modal-close" onClick={() => setReserveOpen(false)} aria-label="Close"><X size={18} /></button><span className="reference-kicker dark-kicker">One equal pass</span><h2 id="reserve-title">Claim your<br /><em>place.</em></h2><p>Enter your details and we’ll create your digital QR entry pass immediately.</p><div className="modal-summary"><span><small>Pass</small>The Complete Buffet Pass</span><span><small>Total</small>£30 / guest</span></div><div className="guest-fields"><label>Your name<Input value={guestName} onChange={event => setGuestName(event.target.value)} placeholder="e.g. Samuel Adeyemi" /></label><label>Your email<Input type="email" value={guestEmail} onChange={event => setGuestEmail(event.target.value)} placeholder="e.g. samuel@example.com" /></label></div><p className="modal-note">No-kids-allowed buffet — parents and adults are welcome to come have fun, so please keep kids at home or with guardians. Your £30 pass covers the full Nigerian buffet and your QR entry pass.</p>{reserveError ? <p className="modal-error">{reserveError}</p> : null}<Button className="form-submit" onClick={handleReserve} disabled={reserveMutation.isPending}>{reserveMutation.isPending ? "Creating your pass…" : "Create my QR pass"} <ArrowRight size={17} /></Button></div></div> : null}
+    {reserveOpen ? <div className="modal-backdrop" role="presentation" onClick={() => setReserveOpen(false)}><div className="reserve-modal reference-modal" role="dialog" aria-modal="true" aria-labelledby="reserve-title" onClick={event => event.stopPropagation()}><button className="modal-close" onClick={() => setReserveOpen(false)} aria-label="Close"><X size={18} /></button><span className="reference-kicker dark-kicker">One equal pass</span><h2 id="reserve-title">Claim your<br /><em>place.</em></h2><p>Enter your details and we’ll create your digital QR entry pass immediately.</p><div className="modal-summary"><span><small>Pass</small>The Complete Buffet Pass</span><span><small>Total</small>€25 / guest</span></div><div className="guest-fields"><label>Your name<Input value={guestName} onChange={event => setGuestName(event.target.value)} placeholder="e.g. Samuel Adeyemi" /></label><label>Your email<Input type="email" value={guestEmail} onChange={event => setGuestEmail(event.target.value)} placeholder="e.g. samuel@example.com" /></label></div><p className="modal-note">No-kids-allowed buffet — parents and adults are welcome to come have fun, so please keep kids at home or with guardians. Your €25 pass covers the full Nigerian buffet and your QR entry pass.</p>{reserveError ? <p className="modal-error">{reserveError}</p> : null}<Button className="form-submit" onClick={handleReserve} disabled={reserveMutation.isPending}>{reserveMutation.isPending ? "Creating your pass…" : "Create my QR pass"} <ArrowRight size={17} /></Button></div></div> : null}
     {activePreview && previewIndex !== null ? (
       <div className="modal-backdrop feast-lightbox-backdrop" role="presentation" onClick={() => setPreviewIndex(null)}>
         <div className="feast-lightbox" role="dialog" aria-modal="true" aria-labelledby="feast-preview-title" onClick={event => event.stopPropagation()}>
