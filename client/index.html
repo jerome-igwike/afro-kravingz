@@ -14,5 +14,20 @@
     <div id="root"></div>
     <script src="/api/platform/config.js"></script>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- Smartsupp Live Chat script -->
+    <script type="text/javascript">
+      var _smartsupp = _smartsupp || {};
+      _smartsupp.key = '7d17186a52c999b0df6b30f87834bcfab4c8c735';
+      _smartsupp.orientation = 'right';
+      _smartsupp.offsetX = window.innerWidth <= 640 ? 16 : 24;
+      _smartsupp.offsetY = window.innerWidth <= 640 ? 18 : 24;
+      window.smartsupp||(function(d) {
+        var s,c,o=smartsupp=function(){ o._.push(arguments)};o._=[];
+        s=d.getElementsByTagName('script')[0];c=d.createElement('script');
+        c.type='text/javascript';c.charset='utf-8';c.async=true;
+        c.src='https://www.smartsuppchat.com/loader.js?';s.parentNode.insertBefore(c,s);
+      })(document);
+    </script>
+    <noscript>Powered by <a href="https://www.smartsupp.com" target="_blank">Smartsupp</a></noscript>
   </body>
 </html>

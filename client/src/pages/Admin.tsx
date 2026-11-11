@@ -26,6 +26,13 @@ export default function Admin() {
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => { if (sessionStorage.getItem("afro-kravings-admin-unlocked") === "yes") { setUnlocked(true); setOrders(loadOrders()); } }, []);
+  useEffect(() => {
+    const win = window as Window & { smartsupp?: (...args: unknown[]) => void };
+    win.smartsupp?.("chat:hide");
+    return () => {
+      win.smartsupp?.("chat:show");
+    };
+  }, []);
   const unlock = (event: React.FormEvent) => {
     event.preventDefault();
     if (passcode === ADMIN_PASSCODE) { sessionStorage.setItem("afro-kravings-admin-unlocked", "yes"); setUnlocked(true); setOrders(loadOrders()); toast.success("Admin staging panel unlocked"); }

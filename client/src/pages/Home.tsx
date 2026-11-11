@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Download, Maximize2, Menu, QrCode, X } from "lucide-react";
 import QRCode from "qrcode";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 const eventDetails = { date: "Saturday, 19 December 2026", time: "Doors 2:00 PM · Buffet 3:00 PM", place: "1 High Point, New John Street, Bradford BD1 2BA", price: "£25" };
@@ -86,7 +86,20 @@ export default function Home() {
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const ticket = guestPass?.ticket ?? null;
   const activePreview = previewIndex !== null ? feastPreviews[previewIndex] : null;
+  const hasBlockingOverlay = previewIndex !== null || reserveOpen || mobileOpen;
+  const smartsuppHiddenRef = useRef(false);
   const chosenPackage = { name: "The Complete Nigerian Buffet Pass", price: "£25" };
+
+  useEffect(() => {
+    const win = window as Window & { smartsupp?: (...args: unknown[]) => void };
+    if (hasBlockingOverlay) {
+      win.smartsupp?.("chat:hide");
+      smartsuppHiddenRef.current = true;
+    } else if (smartsuppHiddenRef.current) {
+      win.smartsupp?.("chat:show");
+      smartsuppHiddenRef.current = false;
+    }
+  }, [hasBlockingOverlay]);
 
   useEffect(() => {
     if (previewIndex === null) return;

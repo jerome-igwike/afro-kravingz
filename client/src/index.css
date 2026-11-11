@@ -1728,13 +1728,14 @@ body { background:#f3eadb; }
 }
 
 .reference-site .reference-footer {
-  padding: 40px 6vw;
+  padding: 42px max(6vw, 112px) 44px 6vw;
   background: var(--ink);
   color: #fffaf3;
   border-top: 1px solid rgba(244, 234, 220, 0.2);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 20px;
 }
 
 .reference-site .reference-footer p {
@@ -1800,6 +1801,7 @@ body { background:#f3eadb; }
   .reference-site .reference-footer {
     flex-direction: column;
     gap: 20px;
+    padding: 36px 24px 92px;
     text-align: center;
   }
 }
