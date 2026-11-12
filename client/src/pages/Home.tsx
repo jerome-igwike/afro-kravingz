@@ -124,6 +124,25 @@ export default function Home() {
   }, [hasBlockingOverlay]);
 
   useEffect(() => {
+    const modalOpen = previewIndex !== null || reserveOpen;
+    if (!modalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [previewIndex, reserveOpen]);
+
+  useEffect(() => {
+    if (!reserveOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setReserveOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [reserveOpen]);
+
+  useEffect(() => {
     if (previewIndex === null) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setPreviewIndex(null);
