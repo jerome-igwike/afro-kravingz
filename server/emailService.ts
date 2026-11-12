@@ -14,7 +14,7 @@ let cachedLogoBuffer: Buffer | null = null;
 export function getResendFromEmail(): string {
   return (
     process.env.RESEND_FROM_EMAIL ||
-    "Afro Kravings <onboarding@resend.dev>"
+    "Afro Kravings <tickets@afrokravingz.com>"
   ).trim();
 }
 

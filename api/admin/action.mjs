@@ -637,7 +637,7 @@ function buildTicketEmailHtml(params) {
 // server/emailService.ts
 var cachedLogoBuffer = null;
 function getResendFromEmail() {
-  return (process.env.RESEND_FROM_EMAIL || "Afro Kravings <onboarding@resend.dev>").trim();
+  return (process.env.RESEND_FROM_EMAIL || "Afro Kravings <tickets@afrokravingz.com>").trim();
 }
 async function loadTicketLogoBuffer(originUrl) {
   if (cachedLogoBuffer) return cachedLogoBuffer;

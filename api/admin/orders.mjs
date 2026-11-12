@@ -214,7 +214,7 @@ async function listAdminReservations() {
 import QRCode from "qrcode";
 import { Resend } from "resend";
 function getResendFromEmail() {
-  return (process.env.RESEND_FROM_EMAIL || "Afro Kravings <onboarding@resend.dev>").trim();
+  return (process.env.RESEND_FROM_EMAIL || "Afro Kravings <tickets@afrokravingz.com>").trim();
 }
 function isResendConfigured() {
   return Boolean(process.env.RESEND_API_KEY?.trim());
