@@ -3,6 +3,11 @@
   "framework": "vite",
   "buildCommand": "pnpm build:static",
   "outputDirectory": "dist/public",
+  "functions": {
+    "api/**/*.ts": {
+      "includeFiles": "client/public/assets/afro-kravings-logo-ticket.png"
+    }
+  },
   "rewrites": [
     {
       "source": "/((?!api/).*)",
