@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { handleAdminActionRequest } from "../../server/bookingHttp";
+import { handleReservationsRequest } from "../bookingHttp";
 
 export default function handler(req: IncomingMessage, res: ServerResponse) {
-  return handleAdminActionRequest(req, res);
+  return handleReservationsRequest(req, res);
 }

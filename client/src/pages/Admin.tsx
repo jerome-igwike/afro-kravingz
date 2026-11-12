@@ -50,6 +50,16 @@ interface Diagnostics {
 const ADMIN_TOKEN_STORAGE_KEY = "afro-kravings-admin-token";
 const PAYMENT_LINK = "https://monzo.me/joenkemakosi?h=5WqWwn&account_type=personal";
 
+async function readJsonSafely<T>(response: Response): Promise<T | null> {
+  const raw = await response.text();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
 export default function Admin() {
   const [passcode, setPasscode] = useState("");
   const [token, setToken] = useState<string>(() => sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) || "");
@@ -92,13 +102,17 @@ export default function Admin() {
           if (!silent) toast.error("Admin session expired — please enter passcode again.");
           return;
         }
-        const data = (await response.json()) as {
+        const data = await readJsonSafely<{
           ok?: boolean;
           orders?: AdminOrder[];
           diagnostics?: Diagnostics;
           databaseError?: string;
           error?: string;
-        };
+        }>(response);
+        if (!data) {
+          setDbError(`Server returned status ${response.status} (non-JSON response).`);
+          return;
+        }
         if (data.diagnostics) setDiagnostics(data.diagnostics);
         setDbError(data.databaseError || data.error || null);
         if (Array.isArray(data.orders)) setOrders(data.orders);
@@ -127,9 +141,9 @@ export default function Admin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "login", passcode }),
       });
-      const data = (await response.json()) as { ok?: boolean; token?: string; error?: string };
-      if (!response.ok || !data.ok || !data.token) {
-        toast.error(data.error || "That passcode is not correct.");
+      const data = await readJsonSafely<{ ok?: boolean; token?: string; error?: string }>(response);
+      if (!response.ok || !data?.ok || !data.token) {
+        toast.error(data?.error || (response.ok ? "Invalid server response." : `Server error (${response.status})`));
         return;
       }
       sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, data.token);
@@ -163,15 +177,15 @@ export default function Admin() {
         toast.error("Session expired — please sign in again.");
         return;
       }
-      const data = (await response.json()) as {
+      const data = await readJsonSafely<{
         ok?: boolean;
         order?: AdminOrder;
         emailSent?: boolean;
         emailError?: string;
         error?: string;
-      };
-      if (!response.ok || !data.ok || !data.order) {
-        toast.error(data.error || "Action could not be completed.");
+      }>(response);
+      if (!response.ok || !data?.ok || !data.order) {
+        toast.error(data?.error || `Server error (${response.status})`);
         return;
       }
       const updatedOrder = data.order;

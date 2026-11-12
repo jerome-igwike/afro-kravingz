@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import QRCode from "qrcode";
 import { Resend } from "resend";
 import {
@@ -24,11 +25,12 @@ export function isResendConfigured(): boolean {
 async function loadTicketLogoBuffer(originUrl?: string): Promise<Buffer | null> {
   if (cachedLogoBuffer) return cachedLogoBuffer;
 
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const candidatePaths = [
     path.resolve(process.cwd(), "client/public/assets/afro-kravings-logo-ticket.png"),
     path.resolve(process.cwd(), "dist/public/assets/afro-kravings-logo-ticket.png"),
-    path.resolve(import.meta.dirname, "../client/public/assets/afro-kravings-logo-ticket.png"),
-    path.resolve(import.meta.dirname, "../../client/public/assets/afro-kravings-logo-ticket.png"),
+    path.resolve(moduleDir, "../client/public/assets/afro-kravings-logo-ticket.png"),
+    path.resolve(moduleDir, "../../client/public/assets/afro-kravings-logo-ticket.png"),
   ];
 
   for (const filePath of candidatePaths) {

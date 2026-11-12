@@ -75,6 +75,16 @@ const feastPreviews = [
   },
 ] as const;
 
+async function readJsonSafely<T>(response: Response): Promise<T | null> {
+  const raw = await response.text();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchLogoDataUrl(): Promise<string> {
   const fallback = `${window.location.origin}/assets/afro-kravings-logo-ticket.png`;
   try {
@@ -161,12 +171,12 @@ export default function Home() {
         const response = await fetch(`/api/reservations?${params.toString()}`, {
           cache: "no-store",
         });
-        const data = (await response.json()) as {
+        const data = await readJsonSafely<{
           ok?: boolean;
           reservation?: ReservationRecord;
           error?: string;
-        };
-        if (response.ok && data.ok && data.reservation) {
+        }>(response);
+        if (response.ok && data?.ok && data.reservation) {
           setReservation(prev => {
             if (prev?.paymentStatus !== "approved" && data.reservation?.paymentStatus === "approved" && !silent) {
               toast.success("Payment approved!", {
@@ -180,8 +190,8 @@ export default function Home() {
         if (response.status === 404) {
           localStorage.removeItem(LAST_RESERVATION_STORAGE_KEY);
           setReservation(null);
-        } else if (!silent && data.error) {
-          toast.error(data.error);
+        } else if (!silent) {
+          toast.error(data?.error || `Server returned ${response.status}`);
         }
       } catch {
         if (!silent) toast.error("Could not reach the server to check status.");
@@ -240,9 +250,9 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: trimmedName, email: normalizedEmail }),
       });
-      const data = (await response.json()) as { ok?: boolean; error?: string };
-      if (!response.ok || !data.ok) {
-        setGuestListError(data.error || "Could not save your details right now.");
+      const data = await readJsonSafely<{ ok?: boolean; error?: string }>(response);
+      if (!response.ok || !data?.ok) {
+        setGuestListError(data?.error || `Could not save your details (${response.status}).`);
         return;
       }
       setGuestListDone(true);
@@ -274,14 +284,14 @@ export default function Home() {
           paymentReference: paymentNote.trim() || undefined,
         }),
       });
-      const data = (await response.json()) as {
+      const data = await readJsonSafely<{
         ok?: boolean;
         alreadyExists?: boolean;
         reservation?: ReservationRecord;
         error?: string;
-      };
-      if (!response.ok || !data.ok || !data.reservation) {
-        setReserveError(data.error || "We couldn’t log your reservation just now. Please try again.");
+      }>(response);
+      if (!response.ok || !data?.ok || !data.reservation) {
+        setReserveError(data?.error || `Server error (${response.status}) while logging reservation. Please try again.`);
         return;
       }
       const next = data.reservation;
