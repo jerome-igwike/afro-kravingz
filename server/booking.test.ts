@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildPrintableTicketHtml, buildTicketEmailHtml } from "../shared/ticketTemplate";
+import { getDatabaseMode } from "./bookingDb";
 import {
   createAdminToken,
   handleAdminActionRequest,
@@ -52,6 +53,8 @@ function mockResponse() {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("ticket template & branding", () => {
@@ -130,10 +133,14 @@ describe("admin auth & booking endpoint safeguards", () => {
     expect(typeof goodLoginRes.getJson().token).toBe("string");
   });
 
-  it("returns explicit 503 error instead of faking a ticket when Postgres is unconfigured", async () => {
+  it("returns explicit 503 error instead of faking a ticket when Postgres & Supabase are unconfigured", async () => {
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("POSTGRES_URL", "");
     vi.stubEnv("SUPABASE_DB_URL", "");
+    vi.stubEnv("SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    vi.stubEnv("SUPABASE_SECRET_KEY", "");
 
     const req = mockRequest({
       method: "POST",
@@ -143,5 +150,99 @@ describe("admin auth & booking endpoint safeguards", () => {
     await handleReservationsRequest(req, res.res);
     expect(res.getStatus()).toBe(503);
     expect(res.getJson().code).toBe("DATABASE_NOT_CONFIGURED");
+  });
+
+  it("supports Supabase REST API when SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are configured", async () => {
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("POSTGRES_URL", "");
+    vi.stubEnv("SUPABASE_DB_URL", "");
+    vi.stubEnv("SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+
+    expect(getDatabaseMode()).toBe("supabase_rest");
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              id: 7,
+              ticket_id: "AKXMAS-2026-SUPA1234",
+              attendee_name: "Tunde Bakare",
+              attendee_email: "tunde@example.com",
+              amount_pence: 2500,
+              payment_reference: "Monzo Tunde",
+              payment_status: "pending",
+              confirmation_status: "not_sent",
+              email_message_id: null,
+              email_error: null,
+              approved_at: null,
+              email_sent_at: null,
+              checked_in_at: null,
+              created_at: "2026-11-12T12:00:00.000Z",
+              updated_at: "2026-11-12T12:00:00.000Z",
+            },
+          ]),
+          {
+            status: 201,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = mockRequest({
+      method: "POST",
+      body: {
+        name: "Tunde Bakare",
+        email: "tunde@example.com",
+        paymentReference: "Monzo Tunde",
+      },
+    });
+    const res = mockResponse();
+    await handleReservationsRequest(req, res.res);
+    expect(res.getStatus()).toBe(201);
+    const body = res.getJson();
+    expect(body.ok).toBe(true);
+    expect(body.reservation.ticketId).toBe("AKXMAS-2026-SUPA1234");
+    expect(body.reservation.paymentStatus).toBe("pending");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns explicit 503 SUPABASE_SCHEMA_MISSING when Supabase tables have not been created yet", async () => {
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("POSTGRES_URL", "");
+    vi.stubEnv("SUPABASE_DB_URL", "");
+    vi.stubEnv("SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: "PGRST205",
+          message: "Could not find the table 'public.buffet_reservations' in the schema cache",
+        }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = mockRequest({
+      method: "POST",
+      body: { name: "Ada Nwosu", email: "ada@example.com" },
+    });
+    const res = mockResponse();
+    await handleReservationsRequest(req, res.res);
+    expect(res.getStatus()).toBe(503);
+    expect(res.getJson().code).toBe("SUPABASE_SCHEMA_MISSING");
   });
 });

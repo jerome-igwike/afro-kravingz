@@ -12,8 +12,19 @@ var schemaReadyPromise = null;
 function getPostgresConnectionString() {
   return (process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_DB_URL || "").trim();
 }
+function getSupabaseRestConfig() {
+  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "").trim();
+  if (!url || !serviceRoleKey) return null;
+  return { url, serviceRoleKey };
+}
+function getDatabaseMode() {
+  if (getPostgresConnectionString().length > 0) return "postgres";
+  if (getSupabaseRestConfig()) return "supabase_rest";
+  return "none";
+}
 function isPostgresConfigured() {
-  return getPostgresConnectionString().length > 0;
+  return getDatabaseMode() !== "none";
 }
 function buildPoolConfig(rawUrl) {
   try {
@@ -61,6 +72,9 @@ function getPgPool() {
   return pool;
 }
 async function ensureBookingSchema() {
+  if (getDatabaseMode() !== "postgres") {
+    return;
+  }
   const db = getPgPool();
   if (!schemaReadyPromise) {
     schemaReadyPromise = (async () => {
@@ -102,6 +116,59 @@ async function ensureBookingSchema() {
   }
   return schemaReadyPromise;
 }
+var SupabaseHttpError = class extends Error {
+  status;
+  code;
+  constructor(status, code, message) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+};
+async function supabaseRestRequest(pathWithQuery, options = {}) {
+  const cfg = getSupabaseRestConfig();
+  if (!cfg) {
+    throw new Error("DATABASE_NOT_CONFIGURED");
+  }
+  const headers = {
+    apikey: cfg.serviceRoleKey,
+    Authorization: `Bearer ${cfg.serviceRoleKey}`,
+    Accept: "application/json"
+  };
+  if (options.body !== void 0) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (options.prefer) {
+    headers.Prefer = options.prefer;
+  }
+  const response = await fetch(`${cfg.url}/rest/v1/${pathWithQuery}`, {
+    method: options.method ?? "GET",
+    headers,
+    body: options.body !== void 0 ? JSON.stringify(options.body) : void 0
+  });
+  const text = await response.text();
+  let parsed = null;
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = null;
+    }
+  }
+  if (!response.ok) {
+    const errObj = parsed && typeof parsed === "object" ? parsed : {};
+    const code = errObj.code ?? null;
+    if (code === "PGRST205" || code === "42P01") {
+      throw new Error("SUPABASE_SCHEMA_MISSING");
+    }
+    throw new SupabaseHttpError(
+      response.status,
+      code,
+      errObj.message || `Supabase request failed (${response.status})`
+    );
+  }
+  return parsed ?? [];
+}
 function mapReservationRow(row) {
   const toIso = (value) => {
     if (!value) return null;
@@ -127,6 +194,14 @@ function mapReservationRow(row) {
   };
 }
 async function listAdminReservations() {
+  const mode = getDatabaseMode();
+  if (mode === "none") throw new Error("DATABASE_NOT_CONFIGURED");
+  if (mode === "supabase_rest") {
+    const rows = await supabaseRestRequest(
+      "buffet_reservations?order=created_at.desc,id.desc"
+    );
+    return rows.map(mapReservationRow);
+  }
   await ensureBookingSchema();
   const db = getPgPool();
   const result = await db.query(
@@ -202,6 +277,7 @@ async function handleAdminOrdersRequest(req, res) {
   }
   const diagnostics = {
     databaseConfigured: isPostgresConfigured(),
+    databaseMode: getDatabaseMode(),
     resendConfigured: isResendConfigured(),
     resendFromEmail: getResendFromEmail(),
     customPasscodeConfigured: Boolean(process.env.ADMIN_PASSCODE?.trim())
@@ -211,7 +287,7 @@ async function handleAdminOrdersRequest(req, res) {
       ok: true,
       diagnostics,
       orders: [],
-      databaseError: "DATABASE_URL is not configured yet."
+      databaseError: "Add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or DATABASE_URL) in Vercel environment variables."
     });
   }
   try {
@@ -223,6 +299,14 @@ async function handleAdminOrdersRequest(req, res) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Database query failed.";
+    if (message === "SUPABASE_SCHEMA_MISSING") {
+      return sendJson(res, 200, {
+        ok: true,
+        diagnostics,
+        orders: [],
+        databaseError: "Supabase is connected, but tables don't exist yet. Run supabase/schema.sql in your Supabase SQL Editor."
+      });
+    }
     console.error("[Admin Orders Error]", error);
     return sendJson(res, 500, {
       ok: false,

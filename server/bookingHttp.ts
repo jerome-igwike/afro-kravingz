@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { z } from "zod";
 import {
   addWaitlistSignup,
+  getDatabaseMode,
   getGuestReservationStatus,
   getReservationByTicketId,
   isPostgresConfigured,
@@ -125,7 +126,16 @@ function handleErrorResponse(res: NodeRes, error: unknown, fallbackMessage: stri
     return sendJson(res, 503, {
       ok: false,
       code: "DATABASE_NOT_CONFIGURED",
-      error: "Reservation database is not configured yet. Please connect Neon or Supabase Postgres via DATABASE_URL.",
+      error:
+        "Reservation database is not configured yet. Add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or DATABASE_URL) in Vercel.",
+    });
+  }
+  if (message === "SUPABASE_SCHEMA_MISSING") {
+    return sendJson(res, 503, {
+      ok: false,
+      code: "SUPABASE_SCHEMA_MISSING",
+      error:
+        "Supabase is connected, but the booking tables haven't been created yet. Run supabase/schema.sql in Supabase SQL Editor.",
     });
   }
   console.error("[Booking API Error]", error);
@@ -185,7 +195,8 @@ export async function handleReservationsRequest(req: NodeReq, res: NodeRes) {
         return sendJson(res, 503, {
           ok: false,
           code: "DATABASE_NOT_CONFIGURED",
-          error: "Reservation database is not connected yet. Add DATABASE_URL in Vercel to accept live bookings.",
+          error:
+            "Reservation database is not connected yet. Add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or DATABASE_URL) in Vercel to accept live bookings.",
         });
       }
       const body = await readJsonBody(req);
@@ -247,6 +258,7 @@ export async function handleAdminOrdersRequest(req: NodeReq, res: NodeRes) {
 
   const diagnostics = {
     databaseConfigured: isPostgresConfigured(),
+    databaseMode: getDatabaseMode(),
     resendConfigured: isResendConfigured(),
     resendFromEmail: getResendFromEmail(),
     customPasscodeConfigured: Boolean(process.env.ADMIN_PASSCODE?.trim()),
@@ -257,7 +269,8 @@ export async function handleAdminOrdersRequest(req: NodeReq, res: NodeRes) {
       ok: true,
       diagnostics,
       orders: [],
-      databaseError: "DATABASE_URL is not configured yet.",
+      databaseError:
+        "Add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or DATABASE_URL) in Vercel environment variables.",
     });
   }
 
@@ -270,6 +283,15 @@ export async function handleAdminOrdersRequest(req: NodeReq, res: NodeRes) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Database query failed.";
+    if (message === "SUPABASE_SCHEMA_MISSING") {
+      return sendJson(res, 200, {
+        ok: true,
+        diagnostics,
+        orders: [],
+        databaseError:
+          "Supabase is connected, but tables don't exist yet. Run supabase/schema.sql in your Supabase SQL Editor.",
+      });
+    }
     console.error("[Admin Orders Error]", error);
     return sendJson(res, 500, {
       ok: false,
@@ -316,7 +338,8 @@ export async function handleAdminActionRequest(req: NodeReq, res: NodeRes) {
     return sendJson(res, 503, {
       ok: false,
       code: "DATABASE_NOT_CONFIGURED",
-      error: "Database is not connected yet. Add DATABASE_URL in Vercel first.",
+      error:
+        "Database is not connected yet. Add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or DATABASE_URL) in Vercel first.",
     });
   }
 

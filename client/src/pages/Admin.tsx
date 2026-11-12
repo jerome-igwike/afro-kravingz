@@ -42,6 +42,7 @@ interface AdminOrder {
 
 interface Diagnostics {
   databaseConfigured: boolean;
+  databaseMode?: "postgres" | "supabase_rest" | "none";
   resendConfigured: boolean;
   resendFromEmail: string;
   customPasscodeConfigured: boolean;
@@ -343,28 +344,34 @@ export default function Admin() {
         </div>
       </header>
 
-      <section className={`admin-notice ${!diagnostics?.databaseConfigured || !diagnostics?.resendConfigured ? "is-warning" : ""}`}>
-        {!diagnostics?.databaseConfigured || !diagnostics?.resendConfigured ? (
+      <section className={`admin-notice ${!diagnostics?.databaseConfigured || !diagnostics?.resendConfigured || dbError ? "is-warning" : ""}`}>
+        {!diagnostics?.databaseConfigured || !diagnostics?.resendConfigured || dbError ? (
           <AlertCircle size={18} />
         ) : (
           <Wallet size={18} />
         )}
         <div>
           <strong>
-            {diagnostics?.databaseConfigured && diagnostics?.resendConfigured
+            {diagnostics?.databaseConfigured && diagnostics?.resendConfigured && !dbError
               ? "Live reservation ledger & automatic Resend dispatch active"
-              : "Setup required in Vercel Environment Variables"}
+              : "Setup required in Vercel / Supabase"}
           </strong>
           <p>
-            Postgres DB:{" "}
-            <b>{diagnostics?.databaseConfigured ? "Connected" : "Missing DATABASE_URL (Neon / Supabase)"}</b> · Resend
-            Email:{" "}
+            Database:{" "}
+            <b>
+              {diagnostics?.databaseConfigured
+                ? diagnostics.databaseMode === "supabase_rest"
+                  ? "Connected (Supabase API)"
+                  : "Connected (Postgres)"
+                : "Missing SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or DATABASE_URL)"}
+            </b>{" "}
+            · Resend Email:{" "}
             <b>
               {diagnostics?.resendConfigured
                 ? `Connected (${diagnostics.resendFromEmail})`
                 : "Missing RESEND_API_KEY"}
             </b>
-            {dbError ? ` · Error: ${dbError}` : ""}
+            {dbError ? ` · Action needed: ${dbError}` : ""}
           </p>
         </div>
       </section>

@@ -12,8 +12,19 @@ var schemaReadyPromise = null;
 function getPostgresConnectionString() {
   return (process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_DB_URL || "").trim();
 }
+function getSupabaseRestConfig() {
+  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "").trim();
+  if (!url || !serviceRoleKey) return null;
+  return { url, serviceRoleKey };
+}
+function getDatabaseMode() {
+  if (getPostgresConnectionString().length > 0) return "postgres";
+  if (getSupabaseRestConfig()) return "supabase_rest";
+  return "none";
+}
 function isPostgresConfigured() {
-  return getPostgresConnectionString().length > 0;
+  return getDatabaseMode() !== "none";
 }
 function buildPoolConfig(rawUrl) {
   try {
@@ -61,6 +72,9 @@ function getPgPool() {
   return pool;
 }
 async function ensureBookingSchema() {
+  if (getDatabaseMode() !== "postgres") {
+    return;
+  }
   const db = getPgPool();
   if (!schemaReadyPromise) {
     schemaReadyPromise = (async () => {
@@ -102,6 +116,59 @@ async function ensureBookingSchema() {
   }
   return schemaReadyPromise;
 }
+var SupabaseHttpError = class extends Error {
+  status;
+  code;
+  constructor(status, code, message) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+};
+async function supabaseRestRequest(pathWithQuery, options = {}) {
+  const cfg = getSupabaseRestConfig();
+  if (!cfg) {
+    throw new Error("DATABASE_NOT_CONFIGURED");
+  }
+  const headers = {
+    apikey: cfg.serviceRoleKey,
+    Authorization: `Bearer ${cfg.serviceRoleKey}`,
+    Accept: "application/json"
+  };
+  if (options.body !== void 0) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (options.prefer) {
+    headers.Prefer = options.prefer;
+  }
+  const response = await fetch(`${cfg.url}/rest/v1/${pathWithQuery}`, {
+    method: options.method ?? "GET",
+    headers,
+    body: options.body !== void 0 ? JSON.stringify(options.body) : void 0
+  });
+  const text = await response.text();
+  let parsed = null;
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = null;
+    }
+  }
+  if (!response.ok) {
+    const errObj = parsed && typeof parsed === "object" ? parsed : {};
+    const code = errObj.code ?? null;
+    if (code === "PGRST205" || code === "42P01") {
+      throw new Error("SUPABASE_SCHEMA_MISSING");
+    }
+    throw new SupabaseHttpError(
+      response.status,
+      code,
+      errObj.message || `Supabase request failed (${response.status})`
+    );
+  }
+  return parsed ?? [];
+}
 function mapReservationRow(row) {
   const toIso = (value) => {
     if (!value) return null;
@@ -127,15 +194,45 @@ function mapReservationRow(row) {
   };
 }
 async function getReservationByTicketId(ticketId) {
+  const mode = getDatabaseMode();
+  if (mode === "none") throw new Error("DATABASE_NOT_CONFIGURED");
+  const cleanTicketId = ticketId.trim().toUpperCase();
+  if (mode === "supabase_rest") {
+    const rows = await supabaseRestRequest(
+      `buffet_reservations?ticket_id=eq.${encodeURIComponent(cleanTicketId)}&limit=1`
+    );
+    return rows[0] ? mapReservationRow(rows[0]) : null;
+  }
   await ensureBookingSchema();
   const db = getPgPool();
   const result = await db.query(
     `SELECT * FROM buffet_reservations WHERE UPPER(ticket_id) = $1 LIMIT 1`,
-    [ticketId.trim().toUpperCase()]
+    [cleanTicketId]
   );
   return result.rows[0] ? mapReservationRow(result.rows[0]) : null;
 }
 async function markReservationApproved(ticketId) {
+  const mode = getDatabaseMode();
+  if (mode === "none") throw new Error("DATABASE_NOT_CONFIGURED");
+  const cleanTicketId = ticketId.trim().toUpperCase();
+  if (mode === "supabase_rest") {
+    const existing = await getReservationByTicketId(cleanTicketId);
+    if (!existing) return null;
+    const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+    const updatedRows = await supabaseRestRequest(
+      `buffet_reservations?id=eq.${existing.id}`,
+      {
+        method: "PATCH",
+        prefer: "return=representation",
+        body: {
+          payment_status: "approved",
+          approved_at: existing.approvedAt ?? nowIso,
+          updated_at: nowIso
+        }
+      }
+    );
+    return updatedRows[0] ? mapReservationRow(updatedRows[0]) : existing;
+  }
   await ensureBookingSchema();
   const db = getPgPool();
   const result = await db.query(
@@ -145,11 +242,34 @@ async function markReservationApproved(ticketId) {
          updated_at = NOW()
      WHERE UPPER(ticket_id) = $1
      RETURNING *`,
-    [ticketId.trim().toUpperCase()]
+    [cleanTicketId]
   );
   return result.rows[0] ? mapReservationRow(result.rows[0]) : null;
 }
 async function recordTicketEmailOutcome(input) {
+  const mode = getDatabaseMode();
+  if (mode === "none") throw new Error("DATABASE_NOT_CONFIGURED");
+  const cleanTicketId = input.ticketId.trim().toUpperCase();
+  if (mode === "supabase_rest") {
+    const existing = await getReservationByTicketId(cleanTicketId);
+    if (!existing) return null;
+    const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+    const updatedRows = await supabaseRestRequest(
+      `buffet_reservations?id=eq.${existing.id}`,
+      {
+        method: "PATCH",
+        prefer: "return=representation",
+        body: {
+          confirmation_status: input.status,
+          email_message_id: input.messageId ?? existing.emailMessageId,
+          email_error: input.error ?? null,
+          email_sent_at: input.status === "sent" ? nowIso : existing.emailSentAt,
+          updated_at: nowIso
+        }
+      }
+    );
+    return updatedRows[0] ? mapReservationRow(updatedRows[0]) : existing;
+  }
   await ensureBookingSchema();
   const db = getPgPool();
   const result = await db.query(
@@ -161,16 +281,33 @@ async function recordTicketEmailOutcome(input) {
          updated_at = NOW()
      WHERE UPPER(ticket_id) = $4
      RETURNING *`,
-    [
-      input.status,
-      input.messageId ?? null,
-      input.error ?? null,
-      input.ticketId.trim().toUpperCase()
-    ]
+    [input.status, input.messageId ?? null, input.error ?? null, cleanTicketId]
   );
   return result.rows[0] ? mapReservationRow(result.rows[0]) : null;
 }
 async function updateReservationStatus(input) {
+  const mode = getDatabaseMode();
+  if (mode === "none") throw new Error("DATABASE_NOT_CONFIGURED");
+  const cleanTicketId = input.ticketId.trim().toUpperCase();
+  if (mode === "supabase_rest") {
+    const existing = await getReservationByTicketId(cleanTicketId);
+    if (!existing) return null;
+    const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+    const nextApprovedAt = input.paymentStatus === "approved" ? existing.approvedAt ?? nowIso : input.paymentStatus === "pending" ? null : existing.approvedAt;
+    const updatedRows = await supabaseRestRequest(
+      `buffet_reservations?id=eq.${existing.id}`,
+      {
+        method: "PATCH",
+        prefer: "return=representation",
+        body: {
+          payment_status: input.paymentStatus,
+          approved_at: nextApprovedAt,
+          updated_at: nowIso
+        }
+      }
+    );
+    return updatedRows[0] ? mapReservationRow(updatedRows[0]) : existing;
+  }
   await ensureBookingSchema();
   const db = getPgPool();
   const result = await db.query(
@@ -180,11 +317,31 @@ async function updateReservationStatus(input) {
          updated_at = NOW()
      WHERE UPPER(ticket_id) = $2
      RETURNING *`,
-    [input.paymentStatus, input.ticketId.trim().toUpperCase()]
+    [input.paymentStatus, cleanTicketId]
   );
   return result.rows[0] ? mapReservationRow(result.rows[0]) : null;
 }
 async function toggleGuestCheckIn(ticketId) {
+  const mode = getDatabaseMode();
+  if (mode === "none") throw new Error("DATABASE_NOT_CONFIGURED");
+  const cleanTicketId = ticketId.trim().toUpperCase();
+  if (mode === "supabase_rest") {
+    const existing = await getReservationByTicketId(cleanTicketId);
+    if (!existing || existing.paymentStatus !== "approved") return null;
+    const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+    const updatedRows = await supabaseRestRequest(
+      `buffet_reservations?id=eq.${existing.id}`,
+      {
+        method: "PATCH",
+        prefer: "return=representation",
+        body: {
+          checked_in_at: existing.checkedInAt ? null : nowIso,
+          updated_at: nowIso
+        }
+      }
+    );
+    return updatedRows[0] ? mapReservationRow(updatedRows[0]) : existing;
+  }
   await ensureBookingSchema();
   const db = getPgPool();
   const result = await db.query(
@@ -193,7 +350,7 @@ async function toggleGuestCheckIn(ticketId) {
          updated_at = NOW()
      WHERE UPPER(ticket_id) = $1 AND payment_status = 'approved'
      RETURNING *`,
-    [ticketId.trim().toUpperCase()]
+    [cleanTicketId]
   );
   return result.rows[0] ? mapReservationRow(result.rows[0]) : null;
 }
@@ -657,7 +814,14 @@ function handleErrorResponse(res, error, fallbackMessage) {
     return sendJson(res, 503, {
       ok: false,
       code: "DATABASE_NOT_CONFIGURED",
-      error: "Reservation database is not configured yet. Please connect Neon or Supabase Postgres via DATABASE_URL."
+      error: "Reservation database is not configured yet. Add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or DATABASE_URL) in Vercel."
+    });
+  }
+  if (message === "SUPABASE_SCHEMA_MISSING") {
+    return sendJson(res, 503, {
+      ok: false,
+      code: "SUPABASE_SCHEMA_MISSING",
+      error: "Supabase is connected, but the booking tables haven't been created yet. Run supabase/schema.sql in Supabase SQL Editor."
     });
   }
   console.error("[Booking API Error]", error);
@@ -707,7 +871,7 @@ async function handleAdminActionRequest(req, res) {
     return sendJson(res, 503, {
       ok: false,
       code: "DATABASE_NOT_CONFIGURED",
-      error: "Database is not connected yet. Add DATABASE_URL in Vercel first."
+      error: "Database is not connected yet. Add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or DATABASE_URL) in Vercel first."
     });
   }
   try {
